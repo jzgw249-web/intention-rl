@@ -9,31 +9,34 @@ __pycache__/
 dist/
 build/
 *.whl
-
-# 虚拟环境
 venv/
 env/
 ENV/
 .venv/
-
-# 训练日志和模型（大文件，不同步）
+.venv312/
+gate1_diagnostics/
+gate1_smoke/
 logs/
 models/
+main_logs/
+main_models/
+main_results/
+smoke_revised_logs/
+smoke_revised_models/
+batch_stdout/
+calibration_logs/
+calibration_models/
+smoke_logs/
+smoke_models/
 *.log
 *.npz
-
-# 图片和视频
 *.png
 *.gif
 *.mp4
 *.avi
-
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# 系统文件
 .DS_Store
 Thumbs.db

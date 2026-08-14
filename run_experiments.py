@@ -1,42 +1,61 @@
-#!/usr/bin/env python3
+import argparse
 import subprocess
 import sys
-import os
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
-def run_experiment(wrapper, seed, total_steps=100000):
-    cmd = [
-        sys.executable,
-        "train.py",
-        "--wrapper", wrapper,
+
+DEFAULT_CONDITIONS = ("sparse", "intention_pb", "dense", "intention_naive")
+
+
+def run_one(condition, seed, args):
+    output_dir = Path(args.stdout_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"{condition}_seed{seed}.stdout.log"
+    command = [
+        sys.executable, "train.py",
+        "--wrapper", condition,
         "--seed", str(seed),
-        "--total_timesteps", str(total_steps),
+        "--env-id", args.env_id,
+        "--total-timesteps", str(args.total_timesteps),
+        "--eval-freq", str(args.eval_freq),
+        "--eval-episodes", str(args.eval_episodes),
+        "--shaping-coeff", str(args.shaping_coeff),
+        "--log-dir", args.log_dir,
+        "--save-dir", args.save_dir,
     ]
-    
-    log_dir = "logs"
-    os.makedirs(log_dir, exist_ok=True)
-    
-    log_file = f"{log_dir}/{wrapper}_seed{seed}.log"
-    
-    print(f"🚀 启动: {wrapper} seed {seed}")
-    with open(log_file, 'w', encoding='utf-8') as f:
-        process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
-        return process
+    with output_path.open("w", encoding="utf-8") as handle:
+        completed = subprocess.run(command, stdout=handle, stderr=subprocess.STDOUT)
+    if completed.returncode:
+        raise RuntimeError(f"{condition} seed {seed} failed; see {output_path}")
+    return condition, seed
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--conditions", nargs="+", default=list(DEFAULT_CONDITIONS))
+    parser.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 50)))
+    parser.add_argument("--env-id", default="MiniGrid-Empty-8x8-v0")
+    parser.add_argument("--total-timesteps", type=int, default=100_000)
+    parser.add_argument("--eval-freq", type=int, default=10_000)
+    parser.add_argument("--eval-episodes", type=int, default=30)
+    parser.add_argument("--shaping-coeff", type=float, default=1.0)
+    parser.add_argument("--max-workers", type=int, default=4)
+    parser.add_argument("--log-dir", default="main_logs")
+    parser.add_argument("--save-dir", default="main_models")
+    parser.add_argument("--stdout-dir", default="batch_stdout")
+    args = parser.parse_args()
+
+    jobs = [(condition, seed) for condition in args.conditions for seed in args.seeds]
+    print(f"Running {len(jobs)} experiments with max_workers={args.max_workers}")
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+        futures = {executor.submit(run_one, condition, seed, args): (condition, seed)
+                   for condition, seed in jobs}
+        for future in as_completed(futures):
+            condition, seed = futures[future]
+            future.result()
+            print(f"completed {condition} seed {seed}", flush=True)
+
 
 if __name__ == "__main__":
-    wrappers = ["sparse", "intention", "dense"]
-    seeds = [42, 43, 44, 45]
-    
-    print(f"📊 共 {len(wrappers) * len(seeds)} 个实验")
-    print(f"⏱️ 每个约 10万 步")
-    
-    processes = []
-    for wrapper in wrappers:
-        for seed in seeds:
-            proc = run_experiment(wrapper, seed)
-            processes.append(proc)
-            time.sleep(0.3)
-    
-    print("\n✅ 所有实验已启动！")
-    print("📝 查看进度: tensorboard --logdir logs")
-    print("🔍 查看进程: ps aux | grep train.py")
+    main()
