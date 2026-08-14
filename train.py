@@ -16,11 +16,15 @@ from diagnose_loitering import NativeRewardInfoWrapper
 from wrappers.dense_wrapper import DenseDistanceWrapper
 from wrappers.intention_pb_wrapper import PotentialIntentionRewardWrapper
 from wrappers.intention_wrapper import IntentionRewardWrapper
+from wrappers.potential_distance_wrapper import PotentialDistanceRewardWrapper
 
 
 PPO_GAMMA = 0.99
-DEFAULT_ENV_ID = "MiniGrid-Empty-8x8-v0"
-CANONICAL_CONDITIONS = ("sparse", "intention_pb", "dense", "intention_naive")
+DEFAULT_ENV_ID = "MiniGrid-Empty-Random-6x6-v0"
+CANONICAL_CONDITIONS = (
+    "sparse", "dense", "intention_naive", "intention_pb",
+    "potential_dist", "intention_pb_shifted",
+)
 CLI_CONDITIONS = CANONICAL_CONDITIONS + ("intention",)
 
 
@@ -33,7 +37,15 @@ def apply_training_reward(env, condition, gamma, shaping_coeff):
     if condition == "sparse":
         return env
     if condition == "intention_pb":
-        return PotentialIntentionRewardWrapper(env, gamma, shaping_coeff)
+        return PotentialIntentionRewardWrapper(
+            env, gamma, shaping_coeff, potential_form="raw"
+        )
+    if condition == "intention_pb_shifted":
+        return PotentialIntentionRewardWrapper(
+            env, gamma, shaping_coeff, potential_form="shifted"
+        )
+    if condition == "potential_dist":
+        return PotentialDistanceRewardWrapper(env, gamma, shaping_coeff)
     if condition == "dense":
         return DenseDistanceWrapper(env, coeff=0.1)
     if condition == "intention_naive":
@@ -43,7 +55,6 @@ def apply_training_reward(env, condition, gamma, shaping_coeff):
 
 def make_env(env_id, condition, seed, *, training, gamma=PPO_GAMMA,
              shaping_coeff=1.0, monitor_path=None):
-    """Training may shape rewards; evaluation never does."""
     def init():
         env = gym.make(env_id)
         env = NativeRewardInfoWrapper(env)
@@ -113,22 +124,19 @@ class NativeEvaluationCallback(BaseCallback):
         numpy_state = np.random.get_state()
         torch_state = torch.random.get_rng_state()
         try:
-            np.random.seed(20260814)
-            torch.manual_seed(20260814)
+            np.random.seed(20260815)
+            torch.manual_seed(20260815)
             stochastic = evaluate_native(self.model, self.env_id, self.eval_seeds, False)
             deterministic = evaluate_native(self.model, self.env_id, self.eval_seeds, True)
         finally:
             np.random.set_state(numpy_state)
             torch.random.set_rng_state(torch_state)
         for metric in self.METRICS:
-            stochastic_values = stochastic[metric]
-            deterministic_values = deterministic[metric]
+            sv = stochastic[metric]
+            dv = deterministic[metric]
             with (self.output_dir / f"{metric}.csv").open("a", newline="", encoding="utf-8") as handle:
                 csv.writer(handle).writerow([
-                    timesteps,
-                    stochastic_values.mean(), stochastic_values.std(),
-                    deterministic_values.mean(), deterministic_values.std(),
-                    len(stochastic_values),
+                    timesteps, sv.mean(), sv.std(), dv.mean(), dv.std(), len(sv)
                 ])
         print(f"eval@{timesteps}: success={stochastic['success_rate'].mean():.3f}, "
               f"native_return={stochastic['native_return'].mean():.3f}, "
@@ -140,17 +148,17 @@ def main():
     parser.add_argument("--wrapper", "--condition", dest="condition", choices=CLI_CONDITIONS, default="sparse")
     parser.add_argument("--env-id", default=DEFAULT_ENV_ID)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--total-timesteps", type=int, default=100_000)
-    parser.add_argument("--eval-freq", type=int, default=10_000)
+    parser.add_argument("--total-timesteps", type=int, default=40_000)
+    parser.add_argument("--eval-freq", type=int, default=2_000)
     parser.add_argument("--eval-episodes", type=int, default=30)
-    parser.add_argument("--eval-seed-base", type=int, default=10_000)
+    parser.add_argument("--eval-seed-base", type=int, default=20_000)
     parser.add_argument("--shaping-coeff", "--lambda", dest="shaping_coeff", type=float, default=1.0)
-    parser.add_argument("--log-dir", default="logs")
-    parser.add_argument("--save-dir", default="models")
+    parser.add_argument("--log-dir", default="task04_logs")
+    parser.add_argument("--save-dir", default="task04_models")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
     if args.debug:
-        args.total_timesteps = 5_000
+        args.total_timesteps = 4_000
 
     condition = canonical_condition(args.condition)
     np.random.seed(args.seed)

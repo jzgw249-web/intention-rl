@@ -28,6 +28,11 @@ calibration_logs/
 calibration_models/
 smoke_logs/
 smoke_models/
+task04_logs/
+task04_models/
+task04_stdout/
+task04_smoke_logs/
+task04_smoke_models/
 *.log
 *.npz
 *.png
