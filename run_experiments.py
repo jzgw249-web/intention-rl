@@ -6,8 +6,7 @@ from pathlib import Path
 
 
 DEFAULT_CONDITIONS = (
-    "sparse", "dense", "intention_naive", "intention_pb",
-    "potential_dist", "intention_pb_shifted",
+    "sparse", "potential_geo", "potential_bfs", "intention_naive",
 )
 
 
@@ -21,6 +20,7 @@ def run_one(condition, seed, args):
         "--total-timesteps", str(args.total_timesteps),
         "--eval-freq", str(args.eval_freq),
         "--eval-episodes", str(args.eval_episodes),
+        "--eval-seed-base", str(args.eval_seed_base),
         "--shaping-coeff", str(args.shaping_coeff),
         "--log-dir", args.log_dir, "--save-dir", args.save_dir,
     ]
@@ -35,21 +35,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--conditions", nargs="+", default=list(DEFAULT_CONDITIONS))
     parser.add_argument("--seeds", nargs="+", type=int, default=list(range(42, 50)))
-    parser.add_argument("--env-id", default="MiniGrid-Empty-Random-6x6-v0")
-    parser.add_argument("--total-timesteps", type=int, default=40_000)
-    parser.add_argument("--eval-freq", type=int, default=2_000)
+    parser.add_argument("--env-id", default="MiniGrid-FourRooms-v0")
+    parser.add_argument("--total-timesteps", type=int, required=True)
+    parser.add_argument("--eval-freq", type=int, required=True)
     parser.add_argument("--eval-episodes", type=int, default=30)
+    parser.add_argument("--eval-seed-base", type=int, default=30_000)
     parser.add_argument("--shaping-coeff", type=float, default=1.0)
     parser.add_argument("--max-workers", type=int, default=4)
-    parser.add_argument("--log-dir", default="task04_logs")
-    parser.add_argument("--save-dir", default="task04_models")
-    parser.add_argument("--stdout-dir", default="task04_stdout")
+    parser.add_argument("--log-dir", default="task05_logs")
+    parser.add_argument("--save-dir", default="task05_models")
+    parser.add_argument("--stdout-dir", default="task05_stdout")
     args = parser.parse_args()
+    if args.max_workers > 4:
+        raise ValueError("task05 concurrency must not exceed 4")
     jobs = [(condition, seed) for condition in args.conditions for seed in args.seeds]
     print(f"Running {len(jobs)} experiments with max_workers={args.max_workers}")
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        futures = {executor.submit(run_one, condition, seed, args): (condition, seed)
-                   for condition, seed in jobs}
+        futures = {
+            executor.submit(run_one, condition, seed, args): (condition, seed)
+            for condition, seed in jobs
+        }
         for future in as_completed(futures):
             condition, seed = futures[future]
             future.result()

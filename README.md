@@ -4,16 +4,13 @@ This project tests whether low-cost reward-shaping signals improve sample
 efficiency in sparse-reward reinforcement learning. It also documents the
 failure mode caused by a naive always-positive intention reward.
 
-## Conditions
+## Task-05 conditions
 
 - `sparse`: native sparse reward only.
-- `dense`: the original dense negative-distance reward.
+- `potential_geo`: potential-based normalized negative Euclidean distance.
+- `potential_bfs`: potential-based normalized exact left/right/forward
+  shortest-path distance on the current FourRooms layout.
 - `intention_naive`: the original always-positive intention reward.
-- `intention_pb`: potential-based raw intention shaping with
-  `Phi = (cos + 1) / 2`.
-- `potential_dist`: potential-based shaping with normalized negative distance.
-- `intention_pb_shifted`: potential-based shifted intention shaping with
-  `Phi = (cos - 1) / 2`.
 - `intention`: backward-compatible alias for `intention_naive`.
 
 Evaluation always uses the unshaped native environment. Success rate, native
@@ -31,20 +28,20 @@ pip install -r requirements.txt
 ## Run one experiment
 
 ```bash
-python train.py --wrapper potential_dist --seed 42
+python train.py --wrapper potential_geo --seed 42
 ```
 
-The default task-04 setup is `MiniGrid-Empty-Random-6x6-v0`, 40,000 requested
-training steps, evaluation every 2,000 steps, and 30 fixed evaluation seeds.
+The task-05 setup is `MiniGrid-FourRooms-v0`, a 500,000-step calibrated budget,
+evaluation every 10,000 steps, and 30 fixed evaluation tasks. The primary
+summary is normalized success-rate AUC through the planned 500,000-step budget.
 
-## Run the full task-04 experiment
+## Run the calibrated matrix
 
 ```bash
-python run_experiments.py --max-workers 4
+python run_experiments.py --total-timesteps 500000 --eval-freq 10000
 python analyze_results.py
 ```
 
 Historical claims in `results_summary.txt` are retained as project evidence but
 must not be treated as valid native-success results. See
-`GATE_TASK03_REVISED_REPORT.md` and `GATE_TASK04_REPORT.md` for the safeguarded
-evaluations.
+`GATE_TASK05_REPORT.md` for the FourRooms experiment.

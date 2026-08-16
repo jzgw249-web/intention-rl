@@ -13,17 +13,16 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from diagnose_loitering import NativeRewardInfoWrapper
-from wrappers.dense_wrapper import DenseDistanceWrapper
-from wrappers.intention_pb_wrapper import PotentialIntentionRewardWrapper
 from wrappers.intention_wrapper import IntentionRewardWrapper
+from wrappers.potential_bfs_wrapper import PotentialBFSRewardWrapper
 from wrappers.potential_distance_wrapper import PotentialDistanceRewardWrapper
 
 
 PPO_GAMMA = 0.99
-DEFAULT_ENV_ID = "MiniGrid-Empty-Random-6x6-v0"
+EVALUATION_POLICY_SEED = 20260817
+DEFAULT_ENV_ID = "MiniGrid-FourRooms-v0"
 CANONICAL_CONDITIONS = (
-    "sparse", "dense", "intention_naive", "intention_pb",
-    "potential_dist", "intention_pb_shifted",
+    "sparse", "potential_geo", "potential_bfs", "intention_naive",
 )
 CLI_CONDITIONS = CANONICAL_CONDITIONS + ("intention",)
 
@@ -36,18 +35,10 @@ def apply_training_reward(env, condition, gamma, shaping_coeff):
     condition = canonical_condition(condition)
     if condition == "sparse":
         return env
-    if condition == "intention_pb":
-        return PotentialIntentionRewardWrapper(
-            env, gamma, shaping_coeff, potential_form="raw"
-        )
-    if condition == "intention_pb_shifted":
-        return PotentialIntentionRewardWrapper(
-            env, gamma, shaping_coeff, potential_form="shifted"
-        )
-    if condition == "potential_dist":
+    if condition == "potential_geo":
         return PotentialDistanceRewardWrapper(env, gamma, shaping_coeff)
-    if condition == "dense":
-        return DenseDistanceWrapper(env, coeff=0.1)
+    if condition == "potential_bfs":
+        return PotentialBFSRewardWrapper(env, gamma, shaping_coeff)
     if condition == "intention_naive":
         return IntentionRewardWrapper(env, coeff=0.5)
     raise ValueError(condition)
@@ -105,7 +96,9 @@ class NativeEvaluationCallback(BaseCallback):
         header = ["timesteps", "stochastic_mean", "stochastic_std",
                   "deterministic_mean", "deterministic_std", "episodes"]
         for metric in self.METRICS:
-            with (self.output_dir / f"{metric}.csv").open("w", newline="", encoding="utf-8") as handle:
+            with (self.output_dir / f"{metric}.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as handle:
                 csv.writer(handle).writerow(header)
         self._evaluate(0)
 
@@ -124,37 +117,59 @@ class NativeEvaluationCallback(BaseCallback):
         numpy_state = np.random.get_state()
         torch_state = torch.random.get_rng_state()
         try:
-            np.random.seed(20260815)
-            torch.manual_seed(20260815)
+            np.random.seed(EVALUATION_POLICY_SEED)
+            torch.manual_seed(EVALUATION_POLICY_SEED)
             stochastic = evaluate_native(self.model, self.env_id, self.eval_seeds, False)
             deterministic = evaluate_native(self.model, self.env_id, self.eval_seeds, True)
         finally:
             np.random.set_state(numpy_state)
             torch.random.set_rng_state(torch_state)
         for metric in self.METRICS:
-            sv = stochastic[metric]
-            dv = deterministic[metric]
-            with (self.output_dir / f"{metric}.csv").open("a", newline="", encoding="utf-8") as handle:
+            stochastic_values = stochastic[metric]
+            deterministic_values = deterministic[metric]
+            with (self.output_dir / f"{metric}.csv").open(
+                "a", newline="", encoding="utf-8"
+            ) as handle:
                 csv.writer(handle).writerow([
-                    timesteps, sv.mean(), sv.std(), dv.mean(), dv.std(), len(sv)
+                    timesteps,
+                    stochastic_values.mean(), stochastic_values.std(),
+                    deterministic_values.mean(), deterministic_values.std(),
+                    len(stochastic_values),
                 ])
-        print(f"eval@{timesteps}: success={stochastic['success_rate'].mean():.3f}, "
-              f"native_return={stochastic['native_return'].mean():.3f}, "
-              f"episode_length={stochastic['episode_length'].mean():.1f}", flush=True)
+        print(
+            f"eval@{timesteps}: success={stochastic['success_rate'].mean():.3f}, "
+            f"native_return={stochastic['native_return'].mean():.3f}, "
+            f"episode_length={stochastic['episode_length'].mean():.1f}",
+            flush=True,
+        )
+
+
+def build_model(env, seed):
+    return PPO(
+        "MlpPolicy", env, learning_rate=3e-4, n_steps=2048, batch_size=64,
+        n_epochs=10, gamma=PPO_GAMMA, gae_lambda=0.95, clip_range=0.2,
+        verbose=0, seed=seed, device="cpu",
+    )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--wrapper", "--condition", dest="condition", choices=CLI_CONDITIONS, default="sparse")
+    parser.add_argument(
+        "--wrapper", "--condition", dest="condition",
+        choices=CLI_CONDITIONS, default="sparse",
+    )
     parser.add_argument("--env-id", default=DEFAULT_ENV_ID)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--total-timesteps", type=int, default=40_000)
-    parser.add_argument("--eval-freq", type=int, default=2_000)
+    parser.add_argument("--total-timesteps", type=int, default=500_000)
+    parser.add_argument("--eval-freq", type=int, default=10_000)
     parser.add_argument("--eval-episodes", type=int, default=30)
-    parser.add_argument("--eval-seed-base", type=int, default=20_000)
-    parser.add_argument("--shaping-coeff", "--lambda", dest="shaping_coeff", type=float, default=1.0)
-    parser.add_argument("--log-dir", default="task04_logs")
-    parser.add_argument("--save-dir", default="task04_models")
+    parser.add_argument("--eval-seed-base", type=int, default=30_000)
+    parser.add_argument(
+        "--shaping-coeff", "--lambda", dest="shaping_coeff",
+        type=float, default=1.0,
+    )
+    parser.add_argument("--log-dir", default="task05_calibration_logs")
+    parser.add_argument("--save-dir", default="task05_calibration_models")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
     if args.debug:
@@ -172,13 +187,9 @@ def main():
 
     env = DummyVecEnv([make_env(
         args.env_id, condition, args.seed, training=True, gamma=PPO_GAMMA,
-        shaping_coeff=args.shaping_coeff, monitor_path=log_path / "monitor.csv"
+        shaping_coeff=args.shaping_coeff, monitor_path=log_path / "monitor.csv",
     )])
-    model = PPO(
-        "MlpPolicy", env, learning_rate=3e-4, n_steps=2048, batch_size=64,
-        n_epochs=10, gamma=PPO_GAMMA, gae_lambda=0.95, clip_range=0.2,
-        verbose=0, seed=args.seed, device="cpu",
-    )
+    model = build_model(env, args.seed)
     callback = NativeEvaluationCallback(
         args.env_id,
         range(args.eval_seed_base, args.eval_seed_base + args.eval_episodes),

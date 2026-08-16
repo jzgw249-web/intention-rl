@@ -33,6 +33,15 @@ task04_models/
 task04_stdout/
 task04_smoke_logs/
 task04_smoke_models/
+task05_logs/
+task05_models/
+task05_stdout/
+task05_smoke_logs/
+task05_smoke_models/
+task05_smoke_stdout/
+task05_calibration_logs/
+task05_calibration_models/
+task05_calibration_stdout/
 *.log
 *.npz
 *.png
