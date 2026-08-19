@@ -22,6 +22,7 @@ def run_one(condition, seed, args):
         "--eval-episodes", str(args.eval_episodes),
         "--eval-seed-base", str(args.eval_seed_base),
         "--shaping-coeff", str(args.shaping_coeff),
+        "--obs", args.obs_mode,
         "--log-dir", args.log_dir, "--save-dir", args.save_dir,
     ]
     with stdout_path.open("w", encoding="utf-8") as handle:
@@ -41,6 +42,10 @@ def main():
     parser.add_argument("--eval-episodes", type=int, default=30)
     parser.add_argument("--eval-seed-base", type=int, default=30_000)
     parser.add_argument("--shaping-coeff", type=float, default=1.0)
+    parser.add_argument(
+        "--obs", dest="obs_mode", choices=("partial", "augmented"),
+        default="partial",
+    )
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument("--log-dir", default="task05_logs")
     parser.add_argument("--save-dir", default="task05_models")

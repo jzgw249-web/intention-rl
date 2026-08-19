@@ -54,3 +54,11 @@ task05_calibration_stdout/
 *.swo
 .DS_Store
 Thumbs.db
+task06_logs/
+task06_models/
+task06_stdout/
+task06_smoke_logs/
+task06_smoke_models/
+task07_logs/
+task07_models/
+task07_stdout/

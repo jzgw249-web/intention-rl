@@ -13,6 +13,8 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from diagnose_loitering import NativeRewardInfoWrapper
+from wrappers.augmented_obs_wrapper import AugmentedObsWrapper
+from wrappers.intention_pb_wrapper import PotentialIntentionRewardWrapper
 from wrappers.intention_wrapper import IntentionRewardWrapper
 from wrappers.potential_bfs_wrapper import PotentialBFSRewardWrapper
 from wrappers.potential_distance_wrapper import PotentialDistanceRewardWrapper
@@ -23,6 +25,10 @@ EVALUATION_POLICY_SEED = 20260817
 DEFAULT_ENV_ID = "MiniGrid-FourRooms-v0"
 CANONICAL_CONDITIONS = (
     "sparse", "potential_geo", "potential_bfs", "intention_naive",
+    # Cosine-alignment potentials.  These were used in task-03 and dropped from
+    # the list during the task-05 refactor; re-added so the Empty-8x8 comparison
+    # between a distance potential and a heading potential can be run in one go.
+    "intention_pb", "intention_pb_shifted",
 )
 CLI_CONDITIONS = CANONICAL_CONDITIONS + ("intention",)
 
@@ -41,17 +47,27 @@ def apply_training_reward(env, condition, gamma, shaping_coeff):
         return PotentialBFSRewardWrapper(env, gamma, shaping_coeff)
     if condition == "intention_naive":
         return IntentionRewardWrapper(env, coeff=0.5)
+    if condition == "intention_pb":
+        return PotentialIntentionRewardWrapper(env, gamma, shaping_coeff, "raw")
+    if condition == "intention_pb_shifted":
+        return PotentialIntentionRewardWrapper(env, gamma, shaping_coeff, "shifted")
     raise ValueError(condition)
 
 
 def make_env(env_id, condition, seed, *, training, gamma=PPO_GAMMA,
-             shaping_coeff=1.0, monitor_path=None):
+             shaping_coeff=1.0, monitor_path=None, obs_mode="partial"):
     def init():
         env = gym.make(env_id)
         env = NativeRewardInfoWrapper(env)
         if training:
             env = apply_training_reward(env, condition, gamma, shaping_coeff)
         env = ImgObsWrapper(env)
+        # "partial" leaves the task-05 code path untouched so those runs stay
+        # bit-comparable; "augmented" exposes the potential's arguments.
+        if obs_mode == "augmented":
+            env = AugmentedObsWrapper(env)
+        elif obs_mode != "partial":
+            raise ValueError(f"unknown obs_mode: {obs_mode}")
         if monitor_path is not None:
             Path(monitor_path).parent.mkdir(parents=True, exist_ok=True)
             env = Monitor(env, filename=str(monitor_path))
@@ -60,10 +76,10 @@ def make_env(env_id, condition, seed, *, training, gamma=PPO_GAMMA,
     return init
 
 
-def evaluate_native(model, env_id, seeds, deterministic):
+def evaluate_native(model, env_id, seeds, deterministic, obs_mode="partial"):
     metrics = {key: [] for key in ("success_rate", "native_return", "episode_length")}
     for seed in seeds:
-        env = make_env(env_id, "sparse", seed, training=False)()
+        env = make_env(env_id, "sparse", seed, training=False, obs_mode=obs_mode)()
         observation, _ = env.reset(seed=seed)
         terminated = truncated = False
         native_return = 0.0
@@ -83,12 +99,14 @@ def evaluate_native(model, env_id, seeds, deterministic):
 class NativeEvaluationCallback(BaseCallback):
     METRICS = ("success_rate", "native_return", "episode_length")
 
-    def __init__(self, env_id, eval_seeds, eval_freq, output_dir):
+    def __init__(self, env_id, eval_seeds, eval_freq, output_dir,
+                 obs_mode="partial"):
         super().__init__()
         self.env_id = env_id
         self.eval_seeds = tuple(eval_seeds)
         self.eval_freq = int(eval_freq)
         self.output_dir = Path(output_dir)
+        self.obs_mode = obs_mode
         self.next_evaluation = self.eval_freq
 
     def _on_training_start(self):
@@ -119,8 +137,10 @@ class NativeEvaluationCallback(BaseCallback):
         try:
             np.random.seed(EVALUATION_POLICY_SEED)
             torch.manual_seed(EVALUATION_POLICY_SEED)
-            stochastic = evaluate_native(self.model, self.env_id, self.eval_seeds, False)
-            deterministic = evaluate_native(self.model, self.env_id, self.eval_seeds, True)
+            stochastic = evaluate_native(
+                self.model, self.env_id, self.eval_seeds, False, self.obs_mode)
+            deterministic = evaluate_native(
+                self.model, self.env_id, self.eval_seeds, True, self.obs_mode)
         finally:
             np.random.set_state(numpy_state)
             torch.random.set_rng_state(torch_state)
@@ -168,6 +188,12 @@ def main():
         "--shaping-coeff", "--lambda", dest="shaping_coeff",
         type=float, default=1.0,
     )
+    parser.add_argument(
+        "--obs", dest="obs_mode", choices=("partial", "augmented"),
+        default="partial",
+        help="partial: 7x7 egocentric image only (task-05 setting). "
+             "augmented: additionally expose normalised agent and goal coordinates.",
+    )
     parser.add_argument("--log-dir", default="task05_calibration_logs")
     parser.add_argument("--save-dir", default="task05_calibration_models")
     parser.add_argument("--debug", action="store_true")
@@ -179,7 +205,14 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     env_slug = args.env_id.replace("MiniGrid-", "").replace("-v0", "").lower()
-    experiment = f"{env_slug}_{condition}_seed{args.seed}"
+    obs_slug = "" if args.obs_mode == "partial" else f"_{args.obs_mode}"
+    # lambda only enters the name when it differs from the historical default of
+    # 1.0, so existing task-03/04/05 directories keep their names.  Without this,
+    # a lambda sweep would overwrite itself: every value would map to one path.
+    lambda_slug = ""
+    if abs(args.shaping_coeff - 1.0) > 1e-9:
+        lambda_slug = f"_lam{args.shaping_coeff:g}".replace(".", "p")
+    experiment = f"{env_slug}{obs_slug}_{condition}{lambda_slug}_seed{args.seed}"
     log_path = Path(args.log_dir) / experiment
     save_path = Path(args.save_dir) / experiment
     log_path.mkdir(parents=True, exist_ok=True)
@@ -188,6 +221,7 @@ def main():
     env = DummyVecEnv([make_env(
         args.env_id, condition, args.seed, training=True, gamma=PPO_GAMMA,
         shaping_coeff=args.shaping_coeff, monitor_path=log_path / "monitor.csv",
+        obs_mode=args.obs_mode,
     )])
     model = build_model(env, args.seed)
     callback = NativeEvaluationCallback(
@@ -195,6 +229,7 @@ def main():
         range(args.eval_seed_base, args.eval_seed_base + args.eval_episodes),
         args.eval_freq,
         log_path / "evaluation",
+        obs_mode=args.obs_mode,
     )
     try:
         model.learn(total_timesteps=args.total_timesteps, callback=callback)

@@ -1,0 +1,10 @@
+setting,condition,delta_auc,se,t,same_sign_seeds,n
+partial,potential_geo,-0.066875,0.015969,-4.1877,8,8
+partial,potential_bfs,-0.086333,0.016785,-5.1434,8,8
+augmented,potential_geo,-0.005208,0.019653,-0.2650,4,8
+augmented,potential_bfs,-0.040292,0.018286,-2.2035,7,8
+harm_change,potential_geo,0.061667,0.020928,2.9467,6,8
+harm_change,potential_bfs,0.046042,0.014477,3.1803,8,8
+prediction2a,geo_minus_bfs_gain,0.015625,0.021783,0.7173,5,8
+prediction2b_residual,potential_geo,-0.005208,0.019653,-0.2650,4,8
+prediction2b_residual,potential_bfs,-0.040292,0.018286,-2.2035,7,8

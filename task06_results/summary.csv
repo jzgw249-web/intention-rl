@@ -1,0 +1,7 @@
+setting,condition,auc_mean,auc_std,final_mean,final_std,n
+partial,sparse,0.191708,0.034091,0.229167,0.061095,8
+partial,potential_geo,0.124833,0.018116,0.208333,0.052042,8
+partial,potential_bfs,0.105375,0.041681,0.187500,0.076263,8
+augmented,sparse,0.141208,0.040077,0.204167,0.061095,8
+augmented,potential_geo,0.136000,0.037168,0.225000,0.074068,8
+augmented,potential_bfs,0.100917,0.024029,0.125000,0.043301,8
