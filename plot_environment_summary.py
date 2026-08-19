@@ -28,10 +28,10 @@ OUT_DIR = Path("task07_results")
 ENVIRONMENTS = [
     ("Empty-Random-6x6\n(random start)", "task04_logs",
      "empty-random-6x6_sparse_seed{s}", "empty-random-6x6_potential_dist_seed{s}",
-     40_000, 56.2),
+     40_000, 55.8),
     ("Empty-8x8\n(fixed start and goal)", "task07_logs",
      "empty-8x8_sparse_seed{s}", "empty-8x8_potential_geo_seed{s}",
-     100_000, 27.0),
+     100_000, 26.5),
     ("FourRooms\n(random start, goal, layout)", "task05_logs",
      "fourrooms_sparse_seed{s}", "fourrooms_potential_geo_seed{s}",
      500_000, 9.4),
