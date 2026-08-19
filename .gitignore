@@ -65,3 +65,24 @@ task07_stdout/
 lambda_logs/
 lambda_models/
 lambda_stdout/
+
+# Keep compact, reproducible result tables and vector figures under version control.
+!main_results/
+!main_results/*.csv
+!main_results/*.pdf
+main_results/*.txt
+!task04_results/
+!task04_results/*.csv
+!task04_results/*.pdf
+!task05_results/
+!task05_results/*.csv
+!task05_results/*.pdf
+!task06_results/
+!task06_results/*.csv
+!task06_results/*.pdf
+!task07_results/
+!task07_results/*.csv
+!task07_results/*.pdf
+!lambda_results/
+!lambda_results/*.csv
+!lambda_results/*.pdf

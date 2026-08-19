@@ -15,6 +15,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from diagnose_loitering import NativeRewardInfoWrapper
 from wrappers.augmented_obs_wrapper import AugmentedObsWrapper
 from wrappers.intention_pb_wrapper import PotentialIntentionRewardWrapper
+from wrappers.teammate_intention_wrapper import IntentionRewardWrapper as TeammateIntentionWrapper
 from wrappers.intention_wrapper import IntentionRewardWrapper
 from wrappers.potential_bfs_wrapper import PotentialBFSRewardWrapper
 from wrappers.potential_distance_wrapper import PotentialDistanceRewardWrapper
@@ -29,6 +30,8 @@ CANONICAL_CONDITIONS = (
     # the list during the task-05 refactor; re-added so the Empty-8x8 comparison
     # between a distance potential and a heading potential can be run in one go.
     "intention_pb", "intention_pb_shifted",
+    # 组内另一实现，原样接入用于定位两套结果的差异来源
+    "teammate_cos",
 )
 CLI_CONDITIONS = CANONICAL_CONDITIONS + ("intention",)
 
@@ -51,6 +54,8 @@ def apply_training_reward(env, condition, gamma, shaping_coeff):
         return PotentialIntentionRewardWrapper(env, gamma, shaping_coeff, "raw")
     if condition == "intention_pb_shifted":
         return PotentialIntentionRewardWrapper(env, gamma, shaping_coeff, "shifted")
+    if condition == "teammate_cos":
+        return TeammateIntentionWrapper(env, coeff=shaping_coeff, gamma=gamma)
     raise ValueError(condition)
 
 
