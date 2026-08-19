@@ -1,0 +1,10 @@
+env,metric,value,n_episodes,n_observations,published_value,abs_diff,agrees
+Empty-Random-6x6,goal_visibility,0.546875,200,23104,0.562,0.015125000000000055,False
+Empty-Random-6x6,initial_phi_variance,0.047559718204562035,200,0,0.046,0.0015597182045620356,True
+Empty-Random-6x6,random_success_rate,0.385,200,0,0.67,0.28500000000000003,False
+Empty-8x8,goal_visibility,0.2268119981007824,200,48441,0.27,0.04318800189921762,False
+Empty-8x8,initial_phi_variance,0.0,200,0,0.0,0.0,True
+Empty-8x8,random_success_rate,0.16,200,0,,,
+FourRooms,goal_visibility,0.086026953085419,200,19738,0.094,0.007973046914581006,False
+FourRooms,initial_phi_variance,0.051143276540289266,200,0,0.053,0.0018567234597107324,True
+FourRooms,random_success_rate,0.04,200,0,0.093,0.053,False
