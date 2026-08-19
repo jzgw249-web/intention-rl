@@ -62,3 +62,6 @@ task06_smoke_models/
 task07_logs/
 task07_models/
 task07_stdout/
+lambda_logs/
+lambda_models/
+lambda_stdout/

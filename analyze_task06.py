@@ -210,19 +210,24 @@ def main():
             mean_curve = naive_band.mean(axis=0)
             ax.plot(naive_steps, mean_curve, color=COLOURS["intention_naive"],
                     label=LABELS["intention_naive"], linewidth=1.6, linestyle="--")
-        ax.set_title(panel_titles[setting], fontsize=10.5)
-        ax.set_xlabel("Environment steps", fontsize=10)
+        ax.set_title(panel_titles[setting], fontsize=11.5)
+        ax.set_xlabel("Environment steps", fontsize=11)
         ax.grid(alpha=0.25, linestyle=":")
         ax.set_xlim(0, BUDGET)
-    axes[0].set_ylabel("Evaluation success rate\n(bare environment)", fontsize=10)
+        # "100k" reads better than "100000" at this figure width
+        ax.set_xticks(np.arange(0, BUDGET + 1, 100_000))
+        ax.set_xticklabels(["0"] + [f"{int(v/1000)}k"
+                                    for v in np.arange(100_000, BUDGET + 1, 100_000)])
+        ax.tick_params(labelsize=10)
+    axes[0].set_ylabel("Evaluation success rate\n(bare environment)", fontsize=11)
     axes[0].set_ylim(bottom=0)
-    axes[0].legend(fontsize=8.5, loc="upper left", framealpha=0.9)
-    axes[1].legend(fontsize=8.5, loc="upper left", framealpha=0.9)
-    fig.suptitle("MiniGrid-FourRooms: shaping hurts only when the potential's "
-                 "arguments are unobservable", fontsize=11.5, y=1.005)
-    fig.text(0.99, -0.02, f"mean $\\pm$ s.d. over {len(SEEDS)} seeds",
-             ha="right", fontsize=8.5, color="#555555")
-    fig.tight_layout()
+    axes[0].legend(fontsize=9.5, loc="upper left", framealpha=0.9)
+    axes[1].legend(fontsize=9.5, loc="upper left", framealpha=0.9)
+    # No suptitle: the LaTeX caption already states the finding, and repeating it
+    # inside the artwork wastes vertical space in a two-page abstract.
+    fig.text(0.995, 0.005, f"mean $\\pm$ s.d. over {len(SEEDS)} seeds",
+             ha="right", va="bottom", fontsize=9, color="#555555")
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
     for extension in ("png", "pdf"):
         fig.savefig(OUT_DIR / f"task06_learning_curves.{extension}",
                     dpi=200, bbox_inches="tight")
