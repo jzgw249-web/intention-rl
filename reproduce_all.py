@@ -168,11 +168,14 @@ def auxiliary():
         )
     with stats_path.open(encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
+            if row["policy"] != "nav3":
+                continue
             published = row["published_value"]
             # Empty-8x8 random success is a new supplemental result and has no
             # published comparator; all eight previously published rows do.
             add("auxiliary", f"{row['metric']}.{row['env']}", float(row["value"]),
                 source="analysis/observability_stats.csv", status="reproduced",
+                policy="nav3", se=(float(row["se"]) if row["se"] else "n/a"),
                 n_episodes=int(row["n_episodes"]),
                 n_observations=int(row["n_observations"]),
                 published=(float(published) if published else "not_published"),
@@ -229,7 +232,7 @@ def write_outputs():
     columns = ["section", "metric", "value", "status", "source", "std", "se", "t",
                "same_sign_seeds", "n", "cosine", "harm_recovered_fraction",
                "harm_removed_fraction", "note", "n_episodes", "n_observations",
-               "published", "abs_diff", "agrees"]
+               "published", "abs_diff", "agrees", "policy"]
     with (ROOT / "results_all.csv").open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
@@ -249,7 +252,8 @@ def write_outputs():
         extras = []
         for key in ("std", "se", "t", "same_sign_seeds", "n",
                     "harm_recovered_fraction", "harm_removed_fraction", "note",
-                    "n_episodes", "n_observations", "published", "abs_diff", "agrees"):
+                    "n_episodes", "n_observations", "published", "abs_diff", "agrees",
+                    "policy"):
             if key in row:
                 extras.append(f"{key}={fmt(row[key])}")
         lines.append(f"| {row['metric']} | {fmt(row['value'])} | {'; '.join(extras)} | "

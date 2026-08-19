@@ -68,15 +68,15 @@ AUC is trapezoidal integration of bare-environment evaluation success rate, divi
 
 | metric | value | extra | status | source |
 |---|---:|---|---|---|
-| goal_visibility.Empty-Random-6x6 | 0.546875 | n_episodes=200; n_observations=23104; published=0.562000; abs_diff=0.015125; agrees=False | reproduced | analysis/observability_stats.csv |
-| initial_phi_variance.Empty-Random-6x6 | 0.047560 | n_episodes=200; n_observations=0; published=0.046000; abs_diff=0.001560; agrees=True | reproduced | analysis/observability_stats.csv |
-| random_success_rate.Empty-Random-6x6 | 0.385000 | n_episodes=200; n_observations=0; published=0.670000; abs_diff=0.285000; agrees=False | reproduced | analysis/observability_stats.csv |
-| goal_visibility.Empty-8x8 | 0.226812 | n_episodes=200; n_observations=48441; published=0.270000; abs_diff=0.043188; agrees=False | reproduced | analysis/observability_stats.csv |
-| initial_phi_variance.Empty-8x8 | 0.000000 | n_episodes=200; n_observations=0; published=0.000000; abs_diff=0.000000; agrees=True | reproduced | analysis/observability_stats.csv |
-| random_success_rate.Empty-8x8 | 0.160000 | n_episodes=200; n_observations=0; published=not_published; abs_diff=n/a; agrees=n/a | reproduced | analysis/observability_stats.csv |
-| goal_visibility.FourRooms | 0.086027 | n_episodes=200; n_observations=19738; published=0.094000; abs_diff=0.007973; agrees=False | reproduced | analysis/observability_stats.csv |
-| initial_phi_variance.FourRooms | 0.051143 | n_episodes=200; n_observations=0; published=0.053000; abs_diff=0.001857; agrees=True | reproduced | analysis/observability_stats.csv |
-| random_success_rate.FourRooms | 0.040000 | n_episodes=200; n_observations=0; published=0.093000; abs_diff=0.053000; agrees=False | reproduced | analysis/observability_stats.csv |
+| goal_visibility.Empty-Random-6x6 | 0.557879 | se=0.003960; n_episodes=200; n_observations=15731; published=0.562000; abs_diff=0.004121; agrees=True; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| initial_phi_variance.Empty-Random-6x6 | 0.047560 | se=n/a; n_episodes=200; n_observations=0; published=0.046000; abs_diff=0.001560; agrees=True; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| random_success_rate.Empty-Random-6x6 | 0.695000 | se=0.032556; n_episodes=200; n_observations=0; published=0.670000; abs_diff=0.025000; agrees=False; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| goal_visibility.Empty-8x8 | 0.264848 | se=0.002217; n_episodes=200; n_observations=39600; published=0.270000; abs_diff=0.005152; agrees=False; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| initial_phi_variance.Empty-8x8 | 0.000000 | se=n/a; n_episodes=200; n_observations=0; published=0.000000; abs_diff=0.000000; agrees=True; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| random_success_rate.Empty-8x8 | 0.515000 | se=0.035339; n_episodes=200; n_observations=0; published=not_published; abs_diff=n/a; agrees=n/a; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| goal_visibility.FourRooms | 0.094063 | se=0.000933; n_episodes=1000; n_observations=97839; published=0.094000; abs_diff=0.000063; agrees=True; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| initial_phi_variance.FourRooms | 0.051751 | se=n/a; n_episodes=1000; n_observations=0; published=0.053000; abs_diff=0.001249; agrees=True; policy=nav3 | reproduced | analysis/observability_stats.csv |
+| random_success_rate.FourRooms | 0.062000 | se=0.007626; n_episodes=1000; n_observations=0; published=0.093000; abs_diff=0.031000; agrees=False; policy=nav3 | reproduced | analysis/observability_stats.csv |
 | training_runs.official_analysis | 208 |  | reproduced | run-directory count in six official log roots |
 | training_runs.all_log_directories | 231 |  | reproduced | run-directory count in every repository directory ending in 'logs' |
 ## document_audit
